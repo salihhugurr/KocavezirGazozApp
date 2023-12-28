@@ -1,0 +1,16 @@
+current directory: /Users/smartiks/Desktop/GelGardas/vendor/bundle/ruby/2.7.0/gems/json-2.7.1/ext/json
+/Users/smartiks/.rbenv/versions/2.7.6/bin/ruby extconf.rb
+creating Makefile
+
+current directory: /Users/smartiks/Desktop/GelGardas/vendor/bundle/ruby/2.7.0/gems/json-2.7.1/ext/json
+make DESTDIR\= sitearchdir\=./.gem.20231219-15026-1y7wlaf sitelibdir\=./.gem.20231219-15026-1y7wlaf clean
+
+current directory: /Users/smartiks/Desktop/GelGardas/vendor/bundle/ruby/2.7.0/gems/json-2.7.1/ext/json
+make DESTDIR\= sitearchdir\=./.gem.20231219-15026-1y7wlaf sitelibdir\=./.gem.20231219-15026-1y7wlaf
+make: Nothing to be done for `all'.
+
+current directory: /Users/smartiks/Desktop/GelGardas/vendor/bundle/ruby/2.7.0/gems/json-2.7.1/ext/json
+make DESTDIR\= sitearchdir\=./.gem.20231219-15026-1y7wlaf sitelibdir\=./.gem.20231219-15026-1y7wlaf install
+
+current directory: /Users/smartiks/Desktop/GelGardas/vendor/bundle/ruby/2.7.0/gems/json-2.7.1/ext/json
+make DESTDIR\= sitearchdir\=./.gem.20231219-15026-1y7wlaf sitelibdir\=./.gem.20231219-15026-1y7wlaf clean
