@@ -1,109 +1,197 @@
 import {
-  Linking,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
-} from 'react-native';
-import React, {useState} from 'react';
-import {useNavigation, useRoute} from '@react-navigation/native';
-import {theme, wh, ww} from '../helpers';
-import CustomHeader from '../components/CustomHeader';
-import {FlatList} from 'react-native-gesture-handler';
-import {Avatar, Divider} from 'react-native-elements';
+  Text,
+  StyleSheet,
+  Alert,
+  Keyboard,
+  TouchableOpacity,
+} from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { theme, ww } from "../helpers";
+import CustomHeader from "../components/CustomHeader";
+import { Button, Divider, Image, Input, ListItem } from "react-native-elements";
+import { TouchableWithoutFeedback } from "react-native-gesture-handler";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { globalStyles } from "../styles";
+import { UpdateCustomerService } from "../services/customer";
+import { GetOrdersByCustomerIdService } from "../services/orders";
 
 const DetailScreen = () => {
-  const route = useRoute();
   const navigation = useNavigation();
-  const [modalVisible, setModalVisible] = useState(false);
+  const route = useRoute();
+  const customer = route.params.item;
+  const [editedCustomer, setEditedCustomer] = useState({ ...customer });
+  const [formChanged, setFormChanged] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [active, setActive] = useState("Müşteri Bilgisi");
+  const nameRef = useRef();
+  const customerNameRef = useRef();
+  const phoneRef = useRef();
+  const emailRef = useRef();
+  const locationRef = useRef();
 
-  const openGps = () => {
-    const scheme = Platform.select({
-      ios: 'maps://0,0?q=',
-      android: 'geo:0,0?q=',
-    });
-    const latLng = `${37.0575518076658},${37.39343528995224}`;
-    const label = 'Custom Label';
-    const url = Platform.select({
-      ios: `${scheme}${label}@${latLng}`,
-      android: `${scheme}${latLng}(${label})`,
-    });
-    Linking.openURL(url);
+  useEffect(() => {
+    getOrders(customer.id);
+  }, []);
+
+  const getOrders = async (id) => {
+    const response = await GetOrdersByCustomerIdService(id);
+    if (response.status) {
+      setOrders(response.data);
+    } else {
+      Alert.alert("Siparişler getirilirken bir hata oluştu");
+    }
+    console.log(response);
   };
 
-  const renderItem = ({item, index}) => {
-    return (
-      <TouchableOpacity style={styles.item}>
-        <View style={{}}>
-          <Avatar source={{uri: route.params.logo}} size={'large'} />
-        </View>
-        <View
-          style={{
-            justifyContent: 'space-between',
-            width: '55%',
-          }}>
-          <Text numberOfLines={2} style={styles.title}>
-            {item.title}
-          </Text>
-          <Text style={styles.info}>
-            Şu an aktif {item.total} kupon bulunmakta.
-          </Text>
-          <Text style={styles.info}>
-            Fiyat: {item.price === 0 ? 'Ücretsiz' : item.price + ' TL'}
-          </Text>
-        </View>
-        <View style={{gap: 10, alignItems: 'center'}}>
-          <TouchableOpacity onPress={() => openGps()}>
-            <Text style={{fontFamily: theme.semiBold, color: theme.secondary}}>
-              Yol Tarifi Al
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => setModalVisible(true)}>
-            <Text style={styles.buttonText}>Kupon Al</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    );
+  const handleInputChange = (field, value) => {
+    setEditedCustomer((prevCustomer) => ({
+      ...prevCustomer,
+      [field]: value,
+    }));
+
+    if (field === "location" && value === editedCustomer.location) {
+      setFormChanged(false);
+    } else {
+      setFormChanged(true);
+    }
   };
 
+  const handleSave = async () => {
+    if (
+      !editedCustomer.name ||
+      !editedCustomer.phone_number ||
+      !editedCustomer.email ||
+      !editedCustomer.location ||
+      !editedCustomer.customer_name
+    ) {
+      Alert.alert("Müşteri düzenleme başarısız. Lütfen tüm alanları doldurun.");
+      return;
+    }
+
+    const payload = {
+      name: editedCustomer.name,
+      customer_name: editedCustomer.customer_name,
+      phone_number: editedCustomer.phone_number,
+      email: editedCustomer.email,
+      location: editedCustomer.location,
+    };
+
+    const response = await UpdateCustomerService(payload, customer.id);
+    if (response.status === true) {
+      Alert.alert("Müşteri düzenleme başarılı.");
+      formChanged(false);
+    } else {
+      Alert.alert(
+        "Müşteri düzenleme başarısız oldu. Lütfen internet bağlantınızı kontrol ediniz."
+      );
+    }
+  };
   return (
     <View style={styles.container}>
-      <CustomHeader
-        left
-        leftNavigation={() => navigation.goBack()}
-        navigation={navigation}
-        title={route.params.title}
-      />
-      <FlatList
-        data={route.params.subItems}
-        ItemSeparatorComponent={<Divider width={1} color={theme.secondary} />}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={renderItem}
-      />
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent
-        style={{flex: 1}}
-        onRequestClose={() => {
-          setModalVisible(!modalVisible);
-        }}>
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalText}>Kuponunuz</Text>
-            <Text style={styles.modalText}>A14IOU6346</Text>
-            <Pressable
-              style={[styles.button2, styles.buttonClose]}
-              onPress={() => setModalVisible(!modalVisible)}>
-              <Text style={styles.textStyle}>Onaylıyorum</Text>
-            </Pressable>
-          </View>
+      <CustomHeader title={customer.name} left navigation={navigation} />
+      <View style={styles.tabContainer}>
+        <TouchableWithoutFeedback
+          onPress={() => setActive("Müşteri Bilgisi")}
+          containerStyle={{
+            ...styles.tabItem,
+            backgroundColor:
+              active === "Müşteri Bilgisi" ? theme.main : theme.secondary,
+          }}
+        >
+          <Text style={{ ...styles.tabText }}>Müşteri Bilgisi</Text>
+        </TouchableWithoutFeedback>
+        <TouchableWithoutFeedback
+          onPress={() => setActive("Geçmiş Siparişler")}
+          containerStyle={{
+            ...styles.tabItem,
+            backgroundColor:
+              active === "Geçmiş Siparişler" ? theme.main : theme.secondary,
+          }}
+        >
+          <Text style={styles.tabText}>Geçmiş Siparişler</Text>
+        </TouchableWithoutFeedback>
+      </View>
+      {active === "Müşteri Bilgisi" && (
+        <View style={styles.formContainer}>
+          <Input
+            ref={nameRef}
+            onSubmitEditing={() => customerNameRef.current.focus()}
+            label="Firma Adı"
+            value={editedCustomer.name}
+            style={globalStyles.input}
+            onChangeText={(text) => handleInputChange("name", text)}
+          />
+          <Input
+            ref={customerNameRef}
+            onSubmitEditing={() => phoneRef.current.focus()}
+            label="Müşteri Adı Soyadı"
+            value={editedCustomer.customer_name}
+            style={globalStyles.input}
+            onChangeText={(text) => handleInputChange("customer_name", text)}
+          />
+          <Input
+            ref={phoneRef}
+            onSubmitEditing={() => emailRef.current.focus()}
+            label="Telefon Numarası"
+            value={editedCustomer.phone_number}
+            style={globalStyles.input}
+            onChangeText={(text) => handleInputChange("phone_number", text)}
+          />
+          <Input
+            ref={emailRef}
+            onSubmitEditing={() => locationRef.current.focus()}
+            label="E Posta"
+            value={editedCustomer.email}
+            style={globalStyles.input}
+            onChangeText={(text) => handleInputChange("email", text)}
+          />
+          <Input
+            ref={locationRef}
+            label="Konum"
+            value={editedCustomer.location}
+            style={globalStyles.inputMultiLine}
+            multiline
+            onChangeText={(text) => handleInputChange("location", text)}
+          />
+          {formChanged === true && (
+            <Button
+              title="Kaydet"
+              onPress={handleSave}
+              titleStyle={{ fontFamily: theme.medium }}
+              placeholderTextColor={theme.grey}
+              buttonStyle={styles.saveButton}
+            />
+          )}
         </View>
-      </Modal>
+      )}
+      {active === "Geçmiş Siparişler" && orders.length > 0 && (
+        <View style={styles.formContainer}>
+          {orders.map((item, index) => (
+            <ListItem key={index}>
+              <ListItem.Content>
+                <ListItem.Title>{item.item_count} adet verildi.</ListItem.Title>
+                <ListItem.Subtitle>
+                  {item.money_gathered}₺ alındı. -- {item.date}
+                </ListItem.Subtitle>
+              </ListItem.Content>
+            </ListItem>
+          ))}
+        </View>
+      )}
+      {active === "Geçmiş Siparişler" && orders.length === 0 && (
+        <View style={styles.formContainer}>
+          <Text
+            style={{
+              textAlign: "center",
+              fontFamily: theme.medium,
+              fontSize: ww(0.035),
+            }}
+          >
+            Bu müşteriye ait sipariş bulunamadı.
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -115,76 +203,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.white,
   },
-  item: {
-    paddingHorizontal: ww(0.03),
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    height: wh(0.125),
-    alignItems: 'center',
-    gap: 15,
+  tabContainer: {
+    zIndex: 2,
+    flexDirection: "row",
+    justifyContent: "space-evenly",
   },
-  title: {
-    fontFamily: theme.bold,
-    fontSize: ww(0.045),
-    maxWidth: '80%',
-    color: theme.main,
-  },
-  info: {
-    fontFamily: theme.regular,
-    fontSize: ww(0.04),
-    color: theme.secondary,
-  },
-  button: {
-    padding: 5,
-    paddingHorizontal: 15,
-    backgroundColor: theme.success,
+  tabItem: {
+    padding: ww(0.03),
+    margin: ww(0.01),
     borderRadius: 4,
-  },
-  buttonText: {
-    fontSize: ww(0.035),
-    fontFamily: theme.semiBold,
-    color: theme.white,
-  },
-  centeredView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 22,
   },
-  modalView: {
-    margin: 20,
-    backgroundColor: theme.white,
-    borderRadius: 8,
-    padding: 35,
-    paddingHorizontal: 50,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+  tabText: {
+    textAlign: "center",
+    color: theme.white,
+    fontFamily: theme.bold,
   },
-  button2: {
-    borderRadius: 8,
-    padding: 10,
-    elevation: 2,
+  formContainer: {
+    padding: 16,
+    flex: 1,
   },
-  buttonOpen: {
-    backgroundColor: '#F194FF',
-  },
-  buttonClose: {
-    backgroundColor: '#2196F3',
-  },
-  textStyle: {
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  modalText: {
-    marginBottom: 15,
-    textAlign: 'center',
+  saveButton: {
+    marginTop: 20,
+    backgroundColor: theme.secondary, // Use your desired button color
   },
 });

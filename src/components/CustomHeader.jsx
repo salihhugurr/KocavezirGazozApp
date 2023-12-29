@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Image,
   Keyboard,
@@ -6,13 +6,14 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-} from 'react-native';
-import {Avatar, Header as HeaderRNE, Icon, Text} from 'react-native-elements';
-import {convertToInitials, theme, wh, ww} from '../helpers';
-import {useNavigation} from '@react-navigation/native';
+} from "react-native";
+import { Avatar, Header as HeaderRNE, Icon, Text } from "react-native-elements";
+import { convertToInitials, theme, wh, ww } from "../helpers";
+import { useNavigation } from "@react-navigation/native";
 
 const CustomHeader = ({
   title,
+  right,
   left,
   leftNavigation,
   navigation,
@@ -24,7 +25,7 @@ const CustomHeader = ({
     <>
       <HeaderRNE
         containerStyle={styles.headerContainer}
-        leftContainerStyle={{width: '100%'}}
+        leftContainerStyle={{ width: "100%" }}
         leftComponent={
           center ? (
             <></>
@@ -33,7 +34,8 @@ const CustomHeader = ({
               style={styles.headerLeft}
               onPress={() =>
                 !leftNavigation ? navigation.goBack() : leftNavigation()
-              }>
+              }
+            >
               <Icon
                 name="chevron-left"
                 type="feather"
@@ -46,25 +48,36 @@ const CustomHeader = ({
           )
         }
         rightComponent={
-          !center ? (
-            <View style={styles.headerRight}>
-              {/* <TouchableOpacity
-                onPress={() => navigation.navigate('Notifications')}>
-                <BellIcon size={ww(0.06)} color={theme.dark} />
-              </TouchableOpacity> */}
-              <TouchableOpacity onPress={() => {}}></TouchableOpacity>
-            </View>
+          right ? (
+            <TouchableOpacity
+              style={styles.headerRight}
+              onPress={() =>
+                !leftNavigation ? navigation.goBack() : leftNavigation()
+              }
+            >
+              <Icon
+                name="x"
+                type="feather"
+                color={theme.secondary}
+                size={ww(0.06)}
+              />
+            </TouchableOpacity>
           ) : (
             <></>
           )
         }
         centerComponent={
-          !left && !center ? (
+          right && title ? (
+            <Text style={styles.titleText}>{title}</Text>
+          ) : !left && !center ? (
             <TouchableWithoutFeedback
-              onPress={() => nav.navigate('App', {screen: 'Map'})}>
+              onPress={() => nav.navigate("App", { screen: "Map" })}
+            >
               <Image
-                source={require('../assets/logo.png')}
-                style={{width: ww(0.2), height: ww(0.2)}}
+                source={{
+                  uri: "https://instagram.fada6-1.fna.fbcdn.net/v/t51.2885-19/69259801_497925487443958_3680032441407373312_n.jpg?stp=dst-jpg_s150x150&_nc_ht=instagram.fada6-1.fna.fbcdn.net&_nc_cat=110&_nc_ohc=Z8_C6LxML9YAX-qnp9Z&edm=AOQ1c0wBAAAA&ccb=7-5&oh=00_AfCkOz51M5NorVKwA5MP8jwKMUCZDg53IqmLj5dSiGF56w&oe=6591EEC8&_nc_sid=8b3546",
+                }}
+                style={{ width: ww(0.15), height: ww(0.15) }}
               />
             </TouchableWithoutFeedback>
           ) : title ? (
@@ -76,7 +89,7 @@ const CustomHeader = ({
       />
       <View
         style={{
-          width: '100%',
+          width: "100%",
           height: 0.2,
           marginTop: 5,
           backgroundColor: theme.secondary,
@@ -89,51 +102,51 @@ const CustomHeader = ({
 
 const styles = StyleSheet.create({
   headerContainer: {
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingTop: 20,
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: theme.white,
     height: wh(0.14),
-    width: '100%',
+    width: "100%",
     paddingHorizontal: 15,
   },
   heading: {
-    color: 'white',
+    color: "white",
     fontSize: ww(0.04),
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   headerRight: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
     gap: ww(0.04),
-    marginTop: 12,
-    flexDirection: 'row',
+    flexDirection: "row",
     marginRight: ww(0.02),
   },
   subheaderText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   headerLeft: {
-    width: '200%',
-    flexDirection: 'row',
+    width: "200%",
+    flexDirection: "row",
     gap: ww(0.03),
-    alignItems: 'center',
+    alignItems: "center",
   },
+
   titleText: {
     flex: 1,
     fontSize: ww(0.045),
     color: theme.dark,
-    alignItems: 'center',
-    textAlign: 'center',
-    fontFamily: theme.semiBold,
+    alignItems: "center",
+    textAlign: "center",
+    fontFamily: theme.medium,
   },
   descText: {
     fontSize: ww(0.02),
     color: theme.red,
-    width: '100%',
+    width: "100%",
     fontFamily: theme.medium,
   },
 });
