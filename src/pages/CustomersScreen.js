@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, {useEffect, useState, useMemo} from 'react';
 import {
   View,
   StyleSheet,
@@ -6,82 +6,94 @@ import {
   TouchableOpacity,
   FlatList,
   Platform,
-} from "react-native";
-import { theme, wh, ww } from "../helpers";
-import CustomHeader from "../components/CustomHeader";
-import { Avatar, Divider, FAB, Icon, SearchBar } from "react-native-elements";
-import { useNavigation } from "@react-navigation/native";
-import { GetAllCustomers } from "../services/customer";
-import { globalStyles } from "../styles";
+  Linking,
+} from 'react-native';
+import {avatarNameGenerator, theme, wh, ww} from '../helpers';
+import CustomHeader from '../components/CustomHeader';
+import {Avatar, Divider, FAB, Icon, SearchBar} from 'react-native-elements';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {GetAllCustomers} from '../services/customer';
+import {globalStyles} from '../styles';
 
 const CustomersScreen = () => {
   const navigation = useNavigation();
   const [customers, setCustomers] = useState([]);
-  const [filteredCustomers, setFilteredCustomers] = useState([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    getCustomers();
-  }, []);
+  // Initialize originalCustomers with empty array
+  const [originalCustomers, setOriginalCustomers] = useState([]);
 
-  const getCustomers = async () => {
-    try {
-      const res = await GetAllCustomers();
-      setCustomers(res.data); // Assuming that res is an array of customers
-      setFilteredCustomers(res.data); // Initialize filteredCustomers with all customers
-    } catch (error) {
-      console.log("Error:", error);
+  useFocusEffect(
+    React.useCallback(() => {
+      const getCustomers = async () => {
+        try {
+          const res = await GetAllCustomers();
+          setCustomers(res.data);
+          setOriginalCustomers(res.data); // Store original list of customers
+        } catch (error) {
+          console.log('Error:', error);
+        }
+      };
+      getCustomers();
+
+      return () => {};
+    }, [navigation]), // Add any dependencies here
+  );
+
+  const handlePhonePress = phoneNumber => {
+    Linking.openURL(`tel:${phoneNumber}`);
+  };
+
+  const filteredCustomers = useMemo(() => {
+    if (search.length === 0) {
+      return originalCustomers; // Return original customers if search text is empty
+    } else {
+      // Filter the original customers list based on the search text
+      return originalCustomers.filter(customer =>
+        customer.name.toLowerCase().includes(search.toLowerCase()),
+      );
     }
-  };
+  }, [search, originalCustomers]);
 
-  const searchCustomers = () => {
-    const filtered = customers.filter((customer) =>
-      customer.name.toLowerCase().includes(search.toLowerCase())
-    );
-    setFilteredCustomers(filtered);
-  };
-
-  const renderItem = ({ item, index }) => {
+  const renderItem = ({item, index}) => {
     return (
       <TouchableOpacity
         style={styles.item}
         onPress={() =>
-          navigation.navigate("DetailScreen", {
-            item: item,
+          navigation.navigate('DetailScreen', {
+            id: item.id,
           })
-        }
-      >
-        <View style={{ flex: 1 }}>
+        }>
+        <View style={{flex: 1}}>
           <Avatar
-            title="AB"
+            title={avatarNameGenerator(item.name)}
             titleStyle={{
               fontFamily: theme.bold,
               fontSize: ww(0.04),
             }}
             rounded
-            size={"medium"}
-            containerStyle={{ backgroundColor: theme.secondary }}
+            size={'medium'}
+            containerStyle={{backgroundColor: theme.secondary}}
           />
         </View>
         <View
           style={{
             flex: 5,
-            justifyContent: "space-between",
-          }}
-        >
+            justifyContent: 'space-between',
+          }}>
           <Text style={styles.title}>{item.name}</Text>
           <Text style={styles.info}>{item.customer_name}</Text>
         </View>
-        <View
+        <TouchableOpacity
+          onPress={() => handlePhonePress(item.phone_number)}
           style={{
             backgroundColor: theme.secondary,
             padding: ww(0.02),
             marginRight: ww(0.03),
             borderRadius: 10,
-          }}
-        >
+          }}>
           <Icon name="phone" color={theme.white} size={ww(0.05)} />
-        </View>
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -92,18 +104,37 @@ const CustomersScreen = () => {
 
       <SearchBar
         placeholder="Müşteri ara..."
-        onChangeText={(text) => setSearch(text)}
-        containerStyle={{ backgroundColor: theme.white }}
+        onChangeText={text => setSearch(text)}
+        containerStyle={{backgroundColor: theme.white}}
         platform={Platform.OS}
-        onClear={() => setFilteredCustomers(customers)}
+        searchIcon={() => (
+          <Icon
+            name="search"
+            type="feather"
+            color={theme.grey}
+            size={ww(0.05)}
+            style={{marginLeft: ww(0.02)}}
+          />
+        )}
+        cancelButtonTitle="Vazgeç"
+        clearIcon={() => (
+          <TouchableOpacity onPress={() => setSearch('')}>
+            <Icon
+              name="trash"
+              type="feather"
+              color={theme.grey}
+              size={ww(0.05)}
+              style={{marginLeft: ww(0.02)}}
+            />
+          </TouchableOpacity>
+        )}
         value={search}
-        onSubmitEditing={searchCustomers}
       />
 
       <FlatList
         data={filteredCustomers}
         ItemSeparatorComponent={<Divider width={0.5} color={theme.secondary} />}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={item => item.id.toString()}
         renderItem={renderItem}
       />
 
@@ -111,12 +142,12 @@ const CustomersScreen = () => {
         <FAB
           placement="right"
           size="small"
-          onPress={() => navigation.navigate("AddCustomer")}
+          onPress={() => navigation.navigate('AddCustomer')}
           color={theme.secondary}
           icon={{
-            name: "plus",
-            type: "entypo",
-            color: "white",
+            name: 'plus',
+            type: 'entypo',
+            color: 'white',
           }}
         />
       </View>
@@ -133,10 +164,10 @@ const styles = StyleSheet.create({
   },
   item: {
     paddingHorizontal: ww(0.03),
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     height: wh(0.1),
-    alignItems: "center",
+    alignItems: 'center',
     gap: 12,
   },
   title: {
@@ -156,7 +187,7 @@ const styles = StyleSheet.create({
     color: theme.secondary,
   },
   fab: {
-    position: "absolute",
+    position: 'absolute',
     bottom: wh(0.03),
     right: ww(0.05),
   },

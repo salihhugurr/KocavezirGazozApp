@@ -5,189 +5,259 @@ import {
   Alert,
   Keyboard,
   TouchableOpacity,
-} from "react-native";
-import React, { useEffect, useRef, useState } from "react";
-import { theme, ww } from "../helpers";
-import CustomHeader from "../components/CustomHeader";
-import { Button, Divider, Image, Input, ListItem } from "react-native-elements";
-import { TouchableWithoutFeedback } from "react-native-gesture-handler";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { globalStyles } from "../styles";
-import { UpdateCustomerService } from "../services/customer";
-import { GetOrdersByCustomerIdService } from "../services/orders";
+  ScrollView,
+} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {formatDate, theme, wh, ww} from '../helpers';
+import CustomHeader from '../components/CustomHeader';
+import {Button, Divider, Image, Input, ListItem} from 'react-native-elements';
+import {TouchableWithoutFeedback} from 'react-native-gesture-handler';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import {globalStyles} from '../styles';
+import {GetOrdersByCustomerIdService} from '../services/orders';
+import {GetCustomerById} from '../services/customer';
 
 const DetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const customer = route.params.item;
-  const [editedCustomer, setEditedCustomer] = useState({ ...customer });
-  const [formChanged, setFormChanged] = useState(false);
+  const [customer, setCustomer] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [active, setActive] = useState("Müşteri Bilgisi");
+  const [active, setActive] = useState('Müşteri Bilgisi');
+  const [loading, setLoading] = useState(true);
   const nameRef = useRef();
   const customerNameRef = useRef();
   const phoneRef = useRef();
   const emailRef = useRef();
   const locationRef = useRef();
+  const balanceRef = useRef();
+  const balanceWhiteSodaRef = useRef();
+  const balanceYellowSodaRef = useRef();
 
-  useEffect(() => {
-    getOrders(customer.id);
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchData = async () => {
+        try {
+          const ordersResponse = await GetOrdersByCustomerIdService(
+            route.params.id,
+          );
+          const customerResponse = await GetCustomerById(route.params.id);
 
-  const getOrders = async (id) => {
-    const response = await GetOrdersByCustomerIdService(id);
-    if (response.status) {
-      setOrders(response.data);
-    } else {
-      Alert.alert("Siparişler getirilirken bir hata oluştu");
-    }
-    console.log(response);
-  };
+          if (ordersResponse.status && customerResponse.status) {
+            setOrders(ordersResponse.data);
+            setCustomer(customerResponse.data);
+          } else {
+            Alert.alert(
+              'Siparişler veya müşteri bilgileri getirilirken bir hata oluştu',
+            );
+          }
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          Alert.alert('Veriler getirilirken bir hata oluştu');
+        } finally {
+          setLoading(false); // Set loading to false regardless of success or failure
+        }
+      };
 
-  const handleInputChange = (field, value) => {
-    setEditedCustomer((prevCustomer) => ({
-      ...prevCustomer,
-      [field]: value,
-    }));
+      fetchData();
 
-    if (field === "location" && value === editedCustomer.location) {
-      setFormChanged(false);
-    } else {
-      setFormChanged(true);
-    }
-  };
+      return () => {
+        // Cleanup function if needed
+      };
+    }, [route.params.id, navigation]), // Add any dependencies here
+  );
 
-  const handleSave = async () => {
-    if (
-      !editedCustomer.name ||
-      !editedCustomer.phone_number ||
-      !editedCustomer.email ||
-      !editedCustomer.location ||
-      !editedCustomer.customer_name
-    ) {
-      Alert.alert("Müşteri düzenleme başarısız. Lütfen tüm alanları doldurun.");
-      return;
-    }
-
-    const payload = {
-      name: editedCustomer.name,
-      customer_name: editedCustomer.customer_name,
-      phone_number: editedCustomer.phone_number,
-      email: editedCustomer.email,
-      location: editedCustomer.location,
-    };
-
-    const response = await UpdateCustomerService(payload, customer.id);
-    if (response.status === true) {
-      Alert.alert("Müşteri düzenleme başarılı.");
-      formChanged(false);
-    } else {
-      Alert.alert(
-        "Müşteri düzenleme başarısız oldu. Lütfen internet bağlantınızı kontrol ediniz."
-      );
-    }
-  };
   return (
     <View style={styles.container}>
-      <CustomHeader title={customer.name} left navigation={navigation} />
+      <CustomHeader
+        title={customer.name}
+        left
+        navigation={navigation}
+        onPressRight={() => {
+          navigation.navigate('AddCustomer', {
+            edit: true,
+            customer: customer,
+          });
+        }}
+        right
+        edit
+      />
       <View style={styles.tabContainer}>
         <TouchableWithoutFeedback
-          onPress={() => setActive("Müşteri Bilgisi")}
+          onPress={() => setActive('Müşteri Bilgisi')}
           containerStyle={{
             ...styles.tabItem,
             backgroundColor:
-              active === "Müşteri Bilgisi" ? theme.main : theme.secondary,
-          }}
-        >
-          <Text style={{ ...styles.tabText }}>Müşteri Bilgisi</Text>
+              active === 'Müşteri Bilgisi' ? theme.main : theme.secondary,
+          }}>
+          <Text style={{...styles.tabText}}>Müşteri Bilgisi</Text>
         </TouchableWithoutFeedback>
         <TouchableWithoutFeedback
-          onPress={() => setActive("Geçmiş Siparişler")}
+          onPress={() => setActive('Geçmiş Siparişler')}
           containerStyle={{
             ...styles.tabItem,
             backgroundColor:
-              active === "Geçmiş Siparişler" ? theme.main : theme.secondary,
-          }}
-        >
+              active === 'Geçmiş Siparişler' ? theme.main : theme.secondary,
+          }}>
           <Text style={styles.tabText}>Geçmiş Siparişler</Text>
         </TouchableWithoutFeedback>
       </View>
-      {active === "Müşteri Bilgisi" && (
-        <View style={styles.formContainer}>
+      {active === 'Müşteri Bilgisi' && !loading && (
+        <ScrollView style={styles.formContainer}>
           <Input
             ref={nameRef}
             onSubmitEditing={() => customerNameRef.current.focus()}
             label="Firma Adı"
-            value={editedCustomer.name}
+            value={customer.name}
+            labelStyle={globalStyles.label}
+            disabled
             style={globalStyles.input}
-            onChangeText={(text) => handleInputChange("name", text)}
+            onChangeText={text => handleInputChange('name', text)}
           />
           <Input
             ref={customerNameRef}
             onSubmitEditing={() => phoneRef.current.focus()}
             label="Müşteri Adı Soyadı"
-            value={editedCustomer.customer_name}
+            labelStyle={globalStyles.label}
+            disabled
+            value={customer.customer_name}
             style={globalStyles.input}
-            onChangeText={(text) => handleInputChange("customer_name", text)}
+            onChangeText={text => handleInputChange('customer_name', text)}
           />
           <Input
             ref={phoneRef}
             onSubmitEditing={() => emailRef.current.focus()}
             label="Telefon Numarası"
-            value={editedCustomer.phone_number}
+            labelStyle={globalStyles.label}
+            disabled
+            value={customer.phone_number}
             style={globalStyles.input}
-            onChangeText={(text) => handleInputChange("phone_number", text)}
+            onChangeText={text => handleInputChange('phone_number', text)}
           />
           <Input
             ref={emailRef}
             onSubmitEditing={() => locationRef.current.focus()}
             label="E Posta"
-            value={editedCustomer.email}
+            labelStyle={globalStyles.label}
+            disabled
+            value={customer.email}
             style={globalStyles.input}
-            onChangeText={(text) => handleInputChange("email", text)}
+            onChangeText={text => handleInputChange('email', text)}
           />
           <Input
             ref={locationRef}
+            onSubmitEditing={() => balanceRef.current.focus()}
             label="Konum"
-            value={editedCustomer.location}
+            labelStyle={globalStyles.label}
+            disabled
+            value={customer.address}
             style={globalStyles.inputMultiLine}
             multiline
-            onChangeText={(text) => handleInputChange("location", text)}
+            onChangeText={text => handleInputChange('address', text)}
           />
-          {formChanged === true && (
-            <Button
-              title="Kaydet"
-              onPress={handleSave}
-              titleStyle={{ fontFamily: theme.medium }}
-              placeholderTextColor={theme.grey}
-              buttonStyle={styles.saveButton}
-            />
-          )}
-        </View>
+          <Input
+            ref={balanceRef}
+            onSubmitEditing={() => balanceWhiteSodaRef.current.focus()}
+            label="Borç"
+            labelStyle={globalStyles.label}
+            disabled
+            value={customer.balance.toString()}
+            style={globalStyles.input}
+            onChangeText={text => handleInputChange('balance', text)}
+          />
+          <Input
+            ref={balanceWhiteSodaRef}
+            onSubmitEditing={() => balanceYellowSodaRef.current.focus()}
+            label="Beyaz Soda Borç"
+            labelStyle={globalStyles.label}
+            disabled
+            value={customer.balance_white_soda.toString()}
+            style={globalStyles.input}
+            onChangeText={text => handleInputChange('balance_white_soda', text)}
+          />
+          <Input
+            ref={balanceYellowSodaRef}
+            label="Sarı Soda Borç"
+            labelStyle={globalStyles.label}
+            disabled
+            value={customer.balance_yellow_soda.toString()}
+            style={globalStyles.input}
+            keyboardType="number-pad"
+            onChangeText={text =>
+              handleInputChange('balance_yellow_soda', text)
+            }
+          />
+        </ScrollView>
       )}
-      {active === "Geçmiş Siparişler" && orders.length > 0 && (
+      {active === 'Geçmiş Siparişler' && orders.length > 0 && !loading && (
         <View style={styles.formContainer}>
           {orders.map((item, index) => (
-            <ListItem key={index}>
+            <ListItem
+              key={index}
+              containerStyle={{
+                backgroundColor: '#f2f2f2',
+                borderRadius: 8,
+              }}>
               <ListItem.Content>
-                <ListItem.Title>{item.item_count} adet verildi.</ListItem.Title>
-                <ListItem.Subtitle>
-                  {item.money_gathered}₺ alındı. -- {item.date}
+                <ListItem.Title
+                  style={{
+                    fontFamily: theme.bold,
+                    fontSize: ww(0.04),
+                    color: '#708090',
+                  }}>
+                  {item.given_white_soda} kasa Beyaz Soda verildi.
+                </ListItem.Title>
+                <ListItem.Title
+                  style={{
+                    fontFamily: theme.bold,
+                    fontSize: ww(0.04),
+                    color: '#708090',
+                  }}>
+                  {item.given_yellow_soda} kasa Sarı Soda verildi.
+                </ListItem.Title>
+                <ListItem.Title
+                  style={{
+                    fontFamily: theme.bold,
+                    fontSize: ww(0.04),
+                    color: '#708090',
+                  }}>
+                  Toplam {item.gathered_white_soda + item.gathered_yellow_soda}{' '}
+                  kasa alındı.
+                </ListItem.Title>
+                <ListItem.Subtitle
+                  style={{
+                    marginTop: 2,
+                    fontFamily: theme.medium,
+                    color: theme.secondary,
+                  }}>
+                  Ürün Fiyatı: {item.price}₺
+                </ListItem.Subtitle>
+                <ListItem.Subtitle
+                  style={{
+                    marginTop: 2,
+                    fontFamily: theme.medium,
+                    color: theme.secondary,
+                  }}>
+                  {item.gathered_money}₺ alındı. --{' '}
+                  {formatDate(item.order_date)}
                 </ListItem.Subtitle>
               </ListItem.Content>
             </ListItem>
           ))}
         </View>
       )}
-      {active === "Geçmiş Siparişler" && orders.length === 0 && (
+      {active === 'Geçmiş Siparişler' && orders.length === 0 && !loading && (
         <View style={styles.formContainer}>
           <Text
             style={{
-              textAlign: "center",
+              textAlign: 'center',
               fontFamily: theme.medium,
+              color: theme.secondary,
               fontSize: ww(0.035),
-            }}
-          >
+            }}>
             Bu müşteriye ait sipariş bulunamadı.
           </Text>
         </View>
@@ -205,8 +275,8 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     zIndex: 2,
-    flexDirection: "row",
-    justifyContent: "space-evenly",
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
   },
   tabItem: {
     padding: ww(0.03),
@@ -215,7 +285,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tabText: {
-    textAlign: "center",
+    textAlign: 'center',
     color: theme.white,
     fontFamily: theme.bold,
   },

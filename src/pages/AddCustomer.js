@@ -1,28 +1,36 @@
-import React, { useRef, useState } from "react";
-import { View, StyleSheet, Alert } from "react-native";
-import { Input, Button, Text } from "react-native-elements";
-import CustomHeader from "../components/CustomHeader";
-import { useNavigation } from "@react-navigation/native";
-import { globalStyles } from "../styles";
-import { theme } from "../helpers";
-import { AddCustomerService } from "../services/customer";
+import React, {useState} from 'react';
+import {View, StyleSheet, Alert} from 'react-native';
+import {Input, Button} from 'react-native-elements';
+import CustomHeader from '../components/CustomHeader';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import {theme, wh, ww} from '../helpers';
+import {AddCustomerService, UpdateCustomerService} from '../services/customer';
 
 const AddCustomer = () => {
   const navigation = useNavigation();
-  const [name, setName] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [email, setEmail] = useState("");
-  const [location, setLocation] = useState("");
-  const nameRef = useRef();
-  const customerNameRef = useRef();
-  const phoneRef = useRef();
-  const emailRef = useRef();
-  const locationRef = useRef();
+  const route = useRoute();
+  console.log('updated');
+  const [inputs, setInputs] = useState({
+    name: route?.params?.edit ? route.params.customer.name : '',
+    customerName: route?.params?.edit
+      ? route.params.customer.customer_name
+      : '',
+    phoneNumber: route?.params?.edit ? route.params.customer.phone_number : '',
+    email: route?.params?.edit ? route.params.customer.email : '',
+    location: route?.params?.edit ? route.params.customer.address : '',
+  });
+
+  const handleInputChange = (key, value) => {
+    setInputs(prevInputs => ({
+      ...prevInputs,
+      [key]: value,
+    }));
+  };
 
   const handleSave = async () => {
+    const {name, customerName, phoneNumber, email, location} = inputs;
     if (!name || !customerName || !phoneNumber || !email || !location) {
-      Alert.alert("Müşteri kaydetme başarısız. Lütfen tüm alanları doldurun.");
+      Alert.alert('Müşteri kaydetme başarısız. Lütfen tüm alanları doldurun.');
       return;
     }
 
@@ -31,88 +39,110 @@ const AddCustomer = () => {
       customer_name: customerName,
       phone_number: phoneNumber,
       email,
-      location,
+      address: location,
     };
 
-    const response = await AddCustomerService(payload);
-    if (response.status === true) {
-      Alert.alert("Müşteri başarılı bir şekilde oluşturuldu.");
-      setName("");
-      setCustomerName("");
-      setPhoneNumber("");
-      setEmail("");
-      setLocation("");
+    if (!route?.params?.edit) {
+      // Code for adding customer
+      const response = await AddCustomerService(payload);
+      if (response.status === true) {
+        Alert.alert('Müşteri başarılı bir şekilde oluşturuldu.');
+        resetForm();
+      } else {
+        Alert.alert(
+          'Müşteri kaydetme başarısız. Lütfen internet bağlantınızı kontrol ediniz.',
+        );
+      }
     } else {
-      Alert.alert(
-        "Müşteri kaydetme başarısız. Lütfen internet bağlantınızı kontrol ediniz."
+      // Code for updating customer
+      const response = await UpdateCustomerService(
+        payload,
+        route.params.customer.id,
       );
+      if (response.status === true) {
+        Alert.alert('Müşteri bilgileri başarılı bir şekilde güncellendi.');
+        navigation.goBack();
+      } else {
+        Alert.alert(
+          'Müşteri düzenleme başarısız. Lütfen internet bağlantınızı kontrol ediniz.',
+        );
+      }
     }
+  };
+
+  const resetForm = () => {
+    setInputs({
+      name: '',
+      customerName: '',
+      phoneNumber: '',
+      email: '',
+      location: '',
+    });
   };
 
   return (
     <View style={styles.container}>
-      <CustomHeader title={"Müşteri Ekle"} left navigation={navigation} />
+      <CustomHeader
+        title={
+          route?.params?.edit
+            ? `${route.params.customer.name} Düzenle`
+            : 'Müşteri Ekle'
+        }
+        left
+        navigation={navigation}
+      />
 
       <View style={styles.formContainer}>
         <Input
-          ref={nameRef}
           label="Firma Adı"
           placeholder="Firma adını giriniz"
-          value={name}
-          style={globalStyles.input}
+          value={inputs.name}
+          style={styles.input}
           placeholderTextColor={theme.grey}
-          onSubmitEditing={() => customerNameRef.current.focus()}
-          onChangeText={(text) => setName(text)}
+          onChangeText={text => handleInputChange('name', text)}
         />
         <Input
-          ref={customerNameRef}
           label="Müşterinin Adı"
           placeholder="Müşterinin adını giriniz"
-          value={customerName}
-          style={globalStyles.input}
+          value={inputs.customerName}
+          style={styles.input}
           placeholderTextColor={theme.grey}
-          onSubmitEditing={() => phoneRef.current.focus()}
-          onChangeText={(text) => setCustomerName(text)}
+          onChangeText={text => handleInputChange('customerName', text)}
         />
         <Input
-          ref={phoneRef}
           label="Telefon Numarası"
           placeholder="Müşterinin telefon numarasını giriniz"
-          value={phoneNumber}
-          onChangeText={(text) => setPhoneNumber(text)}
-          style={globalStyles.input}
+          value={inputs.phoneNumber}
+          onChangeText={text => handleInputChange('phoneNumber', text)}
+          style={styles.input}
           placeholderTextColor={theme.grey}
-          onSubmitEditing={() => emailRef.current.focus()}
           keyboardType="numeric"
         />
         <Input
-          ref={emailRef}
-          onSubmitEditing={() => locationRef.current.focus()}
           label="E Posta"
           placeholder="Müşterinin e postasını giriniz"
-          value={email}
-          onChangeText={(text) => setEmail(text)}
+          value={inputs.email}
+          onChangeText={text => handleInputChange('email', text)}
           autoCapitalize="none"
-          style={globalStyles.input}
+          style={styles.input}
           placeholderTextColor={theme.grey}
           keyboardType="email-address"
         />
         <Input
-          ref={locationRef}
           onSubmitEditing={handleSave}
           label="Konum"
           placeholder="Adres giriniz"
           multiline
-          value={location}
-          style={globalStyles.inputMultiLine}
+          value={inputs.location}
+          style={styles.inputMultiLine}
           placeholderTextColor={theme.grey}
-          onChangeText={(text) => setLocation(text)}
+          onChangeText={text => handleInputChange('location', text)}
         />
 
         <Button
           title="Kaydet"
           onPress={handleSave}
-          titleStyle={{ fontFamily: theme.medium }}
+          titleStyle={{fontFamily: theme.medium}}
           placeholderTextColor={theme.grey}
           buttonStyle={styles.saveButton}
         />
@@ -124,7 +154,7 @@ const AddCustomer = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff", // Use your theme.white here if needed
+    backgroundColor: '#fff', // Use your theme.white here if needed
   },
   formContainer: {
     padding: 16,
@@ -132,6 +162,27 @@ const styles = StyleSheet.create({
   saveButton: {
     marginTop: 20,
     backgroundColor: theme.secondary, // Use your desired button color
+  },
+  title: {
+    fontSize: ww(0.05),
+    fontFamily: theme.bold,
+    textAlign: 'center',
+  },
+  input: {
+    fontSize: ww(0.04),
+    fontFamily: theme.medium,
+    color: theme.secondary,
+  },
+  label: {
+    fontSize: ww(0.035),
+    fontFamily: theme.medium,
+    color: 'gray',
+  },
+  inputMultiLine: {
+    height: wh(0.1),
+    fontSize: ww(0.04),
+    fontFamily: theme.medium,
+    color: theme.secondary,
   },
 });
 

@@ -10,3 +10,4 @@ export {callPhone} from './callPhone';
 export {removeSpaces} from './removeSpaces';
 export {imageUrl} from './imageUrl';
 export {openMapsApp} from './openMapsApp';
+export {avatarNameGenerator} from './avatarNameGenerator';
